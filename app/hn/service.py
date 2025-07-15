@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from collections import Counter
 from app.db import db_conn
 from .tags import TECH_TAGS
@@ -89,6 +89,37 @@ def get_all_tags_with_counts(limit=50):
             )
             tags = cur.fetchall()
     return [{"tag": row["tag"], "count": row["total_count"]} for row in tags]
+
+
+def get_popular_tags_by_period(period: str, limit=50):
+    today = date.today()
+
+    periods = {
+        "1d": timedelta(days=1),
+        "3d": timedelta(days=3),
+        "1w": timedelta(weeks=1),
+        "2w": timedelta(weeks=2),
+        "1m": timedelta(days=30),
+    }
+
+    if period not in periods:
+        raise ValueError("Invalid period specified")
+
+    from_date = today - periods[period]
+
+    with db_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT tag, SUM(count) as total_count
+                FROM hn_tag_statistics
+                WHERE date >= %s
+                GROUP BY tag
+                ORDER BY total_count DESC
+                LIMIT %s;
+            """, (from_date, limit))
+            rows = cur.fetchall()
+
+    return [{"tag": row["tag"], "count": row["total_count"]} for row in rows]
 
 
 def save_posts(posts):
