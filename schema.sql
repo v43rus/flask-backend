@@ -1,5 +1,5 @@
 -- posts table
-CREATE TABLE IF NOT EXISTS posts (
+CREATE TABLE IF NOT EXISTS hn_posts (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
     url TEXT,
@@ -10,14 +10,14 @@ CREATE TABLE IF NOT EXISTS posts (
 );
 
 -- tags table
-CREATE TABLE IF NOT EXISTS tags (
+CREATE TABLE IF NOT EXISTS hn_tags (
     tag TEXT NOT NULL,
-    post_id TEXT REFERENCES posts(id),
+    post_id TEXT REFERENCES hn_posts(id),
     PRIMARY KEY (tag, post_id)
 );
 
 -- tag_statistics table
-CREATE TABLE IF NOT EXISTS tag_statistics (
+CREATE TABLE IF NOT EXISTS hn_tag_statistics (
     tag TEXT NOT NULL,
     date DATE NOT NULL,
     count INTEGER NOT NULL,

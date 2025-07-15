@@ -1,8 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime
+from datetime import datetime, date
 from collections import Counter
-from datetime import date
 from app.db import db_conn
 from .tags import TECH_TAGS
 
@@ -45,10 +44,10 @@ def save_daily_tag_statistics(tag_list):
       with conn.cursor() as cur:
         for tag, count in counter.items():
             cur.execute("""
-                INSERT INTO tag_statistics (tag, date, count)
+                INSERT INTO hn_tag_statistics (tag, date, count)
                 VALUES (%s, %s, %s)
                 ON CONFLICT (tag, date)
-                DO UPDATE SET count = tag_statistics.count + EXCLUDED.count
+                DO UPDATE SET count = hn_tag_statistics.count + EXCLUDED.count
             """, (tag, today, count))
       conn.commit()
 
@@ -58,22 +57,23 @@ def get_tag_history_service(tag):
       with conn.cursor() as cur:
         cur.execute("""
             SELECT date, count
-            FROM tag_statistics
+            FROM hn_tag_statistics
             WHERE tag = %s
             ORDER BY date ASC
         """, (tag,))
         history = cur.fetchall()
     return [{"date": row["date"], "count": row["count"]} for row in history]
 
+
 def get_all_tags_with_counts(limit=50):
     with db_conn() as conn:
       with conn.cursor() as cur:
         cur.execute("""
             SELECT tag, SUM(count) as total_count
-            FROM tag_statistics
+            FROM hn_tag_statistics
             GROUP BY tag
             ORDER BY total_count DESC
-            LIMIT %s;
+            LIMIT %s
         """, (limit,))
         tags = cur.fetchall()
     return [{"tag": row["tag"], "count": row["total_count"]} for row in tags]
@@ -85,29 +85,34 @@ def save_posts(posts):
         # Insert or update posts
         for post in posts:
             cur.execute("""
-                INSERT INTO posts (id, title, url, author, points, created_at)
+                INSERT INTO hn_posts (id, title, url, author, points, created_at)
                 VALUES (%s, %s, %s, %s, %s, %s)
                 ON CONFLICT (id)
-                DO UPDATE SET points = posts.points + EXCLUDED.points
-            """, (post["id"], post["title"], post["url"], post["author"], post["points"], post["created_at"]))
-        # Insert tags
-        for post in posts:
-            tags = extract_tags(post["title"])
-            for tag in tags:
-                cur.execute("""
-                    INSERT INTO tags (tag, post_id)
-                    VALUES (%s, %s)
-                    ON CONFLICT DO NOTHING
-                """, (tag.lower(), post["id"]))
-        # Save daily tag statistics
+                DO UPDATE SET points = hn_posts.points + EXCLUDED.points
+            """, (
+                post["id"],
+                post["title"],
+                post["url"],
+                post["author"],
+                post["points"],
+                post["created_at"]
+            ))
+
+        # Extract and insert tags
         all_tags = []
         for post in posts:
             tags = extract_tags(post["title"])
             all_tags.extend(tags)
-            ...
+            for tag in tags:
+                cur.execute("""
+                    INSERT INTO hn_tags (tag, post_id)
+                    VALUES (%s, %s)
+                    ON CONFLICT DO NOTHING
+                """, (tag.lower(), post["id"]))
+        # Save daily tag statistics
         save_daily_tag_statistics(all_tags)
       conn.commit()
-    
+
 
 def extract_tags(title):
     found = [tag for tag in TECH_TAGS if tag.lower() in title.lower()]
