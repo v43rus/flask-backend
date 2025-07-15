@@ -1,0 +1,15 @@
+name: Scheduled Scrape
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # Every day at 06:00 UTC
+    - cron: '0 18 * * *'  # Every day at 18:00 UTC
+  workflow_dispatch:      # Allow manual trigger
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit the scrape endpoint
+        run: |
+          curl -X GET https://flask-backend-gtbb.onrender.com/api/scrape
