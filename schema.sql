@@ -15,3 +15,11 @@ CREATE TABLE IF NOT EXISTS tags (
     post_id TEXT REFERENCES posts(id),
     PRIMARY KEY (tag, post_id)
 );
+
+-- tag_statistics table
+CREATE TABLE IF NOT EXISTS tag_statistics (
+    tag TEXT NOT NULL,
+    date DATE NOT NULL,
+    count INTEGER NOT NULL,
+    PRIMARY KEY (tag, date)
+);
