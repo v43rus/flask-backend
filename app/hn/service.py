@@ -4,6 +4,7 @@ from datetime import datetime
 from collections import Counter
 from datetime import date
 from app.db import db_conn
+from .tags import TECH_TAGS
 
 def scrape_hackernews():
     url = "https://news.ycombinator.com/"
@@ -62,12 +63,26 @@ def get_tag_history_service(tag):
             ORDER BY date ASC
         """, (tag,))
         history = cur.fetchall()
-    return [{"date": row[0], "count": row[1]} for row in history]
+    return [{"date": row["date"], "count": row["count"]} for row in history]
+
+def get_all_tags_with_counts(limit=50):
+    with db_conn() as conn:
+      with conn.cursor() as cur:
+        cur.execute("""
+            SELECT tag, SUM(count) as total_count
+            FROM tag_statistics
+            GROUP BY tag
+            ORDER BY total_count DESC
+            LIMIT %s;
+        """, (limit,))
+        tags = cur.fetchall()
+    return [{"tag": row["tag"], "count": row["total_count"]} for row in tags]
 
 
 def save_posts(posts):
     with db_conn() as conn:
       with conn.cursor() as cur:
+        # Insert or update posts
         for post in posts:
             cur.execute("""
                 INSERT INTO posts (id, title, url, author, points, created_at)
@@ -75,5 +90,25 @@ def save_posts(posts):
                 ON CONFLICT (id)
                 DO UPDATE SET points = posts.points + EXCLUDED.points
             """, (post["id"], post["title"], post["url"], post["author"], post["points"], post["created_at"]))
+        # Insert tags
+        for post in posts:
+            tags = extract_tags(post["title"])
+            for tag in tags:
+                cur.execute("""
+                    INSERT INTO tags (tag, post_id)
+                    VALUES (%s, %s)
+                    ON CONFLICT DO NOTHING
+                """, (tag.lower(), post["id"]))
+        # Save daily tag statistics
+        all_tags = []
+        for post in posts:
+            tags = extract_tags(post["title"])
+            all_tags.extend(tags)
+            ...
+        save_daily_tag_statistics(all_tags)
       conn.commit()
     
+
+def extract_tags(title):
+    found = [tag for tag in TECH_TAGS if tag.lower() in title.lower()]
+    return found
