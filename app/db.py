@@ -6,6 +6,7 @@ from contextlib import contextmanager
 
 load_dotenv()
 
+
 @contextmanager
 def db_conn():
     conn = get_db_connection()
@@ -13,6 +14,7 @@ def db_conn():
         yield conn
     finally:
         conn.close()
+
 
 def get_db_connection():
     return psycopg2.connect(os.getenv("DATABASE_URL"), cursor_factory=RealDictCursor)

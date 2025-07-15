@@ -1,6 +1,7 @@
 from flask import Flask
 from dotenv import load_dotenv
 
+
 def create_app():
     # Load environment variables from .env
     load_dotenv()
