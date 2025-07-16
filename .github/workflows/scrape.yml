@@ -2,10 +2,7 @@ name: Scheduled Scrape
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # Every day at 00:00 UTC
-    - cron: '0 6 * * *'   # Every day at 06:00 UTC
-    - cron: '0 12 * * *'  # Every day at 12:00 UTC
-    - cron: '0 18 * * *'  # Every day at 18:00 UTC
+    - cron: '0 * * * *'  # Scrape every hour
   workflow_dispatch:      # Allow manual trigger
 
 jobs:
