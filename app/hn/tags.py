@@ -17,7 +17,6 @@ TECH_TAGS = [
     "cloud",
     "AWS",
     "Azure",
-    "CI/CD",
     "python",
     "javascript",
     "go",

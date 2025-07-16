@@ -71,7 +71,26 @@ def get_tag_history_service(tag):
                 (tag,),
             )
             history = cur.fetchall()
-    return [{"date": row["date"], "count": row["count"]} for row in history]
+    
+    # Create a dictionary of existing data for quick lookup
+    existing_data = {row["date"]: row["count"] for row in history}
+    
+    # Generate all dates from July 15, 2025 to today
+    start_date = date(2025, 7, 15)
+    end_date = date.today()
+    
+    complete_history = []
+    current_date = start_date
+    
+    while current_date <= end_date:
+        count = existing_data.get(current_date, 0)  # Use 0 if no data exists
+        complete_history.append({
+            "date": current_date,
+            "count": count
+        })
+        current_date += timedelta(days=1)
+    
+    return complete_history
 
 
 def get_all_tags_with_counts(limit=50):
