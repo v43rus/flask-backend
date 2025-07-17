@@ -141,6 +141,62 @@ def get_popular_tags_by_period(period: str, limit=50):
     return [{"tag": row["tag"], "count": row["total_count"]} for row in rows]
 
 
+def get_popular_posts_by_period_and_tag(tag: str, period: str, page: int = 1, per_page: int = 12):
+    today = date.today()
+
+    periods = {
+        "1d": timedelta(days=1),
+        "3d": timedelta(days=3),
+        "1w": timedelta(weeks=1),
+        "2w": timedelta(weeks=2),
+        "1m": timedelta(days=30),
+    }
+
+    if period not in periods:
+        raise ValueError("Invalid period specified")
+
+    from_date = today - periods[period]
+    from_datetime = datetime.combine(from_date, datetime.min.time())
+    offset = (page - 1) * per_page
+
+    with db_conn() as conn:
+        with conn.cursor() as cur:
+            # Get total count for pagination info
+            cur.execute("""
+                SELECT COUNT(*) as count
+                FROM hn_posts p 
+                JOIN hn_tags t ON p.id = t.post_id
+                WHERE t.tag = %s AND p.created_at >= %s;
+            """, (tag.lower(), from_datetime.isoformat()))
+            result = cur.fetchone()
+            total_count = result['count'] if result else 0
+
+            # Get paginated posts
+            cur.execute("""
+                SELECT p.id, p.title, p.url, p.author, p.points, p.created_at
+                FROM hn_posts p
+                JOIN hn_tags t ON p.id = t.post_id
+                WHERE t.tag = %s AND p.created_at >= %s
+                ORDER BY p.points DESC
+                LIMIT %s OFFSET %s;
+            """, (tag.lower(), from_datetime.isoformat(), per_page, offset))
+            rows = cur.fetchall()
+
+    total_pages = (total_count + per_page - 1) // per_page if total_count > 0 else 0
+
+    return {
+        "posts": [dict(row) for row in rows],
+        "pagination": {
+            "current_page": page,
+            "per_page": per_page,
+            "total_posts": total_count,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1
+        }
+    }
+
+
 def save_posts(posts):
     with db_conn() as conn:
         with conn.cursor() as cur:
