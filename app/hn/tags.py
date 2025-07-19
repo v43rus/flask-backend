@@ -19,7 +19,7 @@ TECH_TAGS = [
     "Azure",
     "python",
     "javascript",
-    "go",
+    "Grok",
     "rust",
     "regex",
     "AI",
